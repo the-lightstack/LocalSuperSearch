@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+mod file_index;
 mod crawl;
 
 
@@ -10,7 +11,7 @@ mod crawl;
 
 
 fn main() {
-    let mut cd = crawl::CrawlDatabase::init();
+    let mut cd = crawl::CrawlDatabase::init(":memory:");
     println!("Starting crawl [...]");
-    cd.start_crawl(PathBuf::from("."));
+    cd.start_crawl(PathBuf::from("./testhome"));
 }
