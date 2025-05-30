@@ -11,7 +11,7 @@ mod crawl;
 
 
 fn main() {
-    let mut cd = crawl::CrawlDatabase::init(":memory:");
+    let mut cd = crawl::CrawlDatabase::init("./out.db");
     println!("Starting crawl [...]");
     cd.start_crawl(PathBuf::from("./testhome"));
 }

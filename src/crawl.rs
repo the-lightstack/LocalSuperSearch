@@ -1,4 +1,4 @@
-use std::{ path::PathBuf};
+use std::{ path::PathBuf, time::UNIX_EPOCH};
 use sqlite::Connection;
 use std::fs;
 
@@ -22,57 +22,58 @@ enum FileType{
     LibreWriter,
     Excel,
     Plain,
-    Container,
-
 
     Unknown,
 }
 impl FileType {
-    pub fn get(file_ext:&str) -> Self{
+    pub fn get(file_ext:Option<&str>) -> Self{
         match file_ext{
-            "md" => Self::Markdown,
-
-            "yml" => Self::Config,
-            "yaml" => Self::Config,
-            "json" => Self::Config,
-            "config" => Self::Config,
-            "toml" => Self::Config,
-            "xml" => Self::Config,
-            "html" => Self::Web,
-            "htmx" => Self::Web,
-            "css" => Self::Web,
-            "py" => Self::Python,
-            "js" => Self::JavaScript,
-            "ts" => Self::JavaScript,
-            "rs" => Self::Rust,
-            "c" => Self::CSOURCE,
-            "cpp" => Self::CSOURCE,
-            "h" => Self::CSOURCE,
-            "hpp" => Self::CSOURCE,
-            "ppt" => Self::Presentation,
-            "pptx" => Self::Presentation,
-            "pps" => Self::Presentation,
-            "ppsx" => Self::Presentation,
-            "pot" => Self::Presentation,
-            "potx" => Self::Presentation,
-            "odp" => Self::Presentation,
-            "odkey" => Self::Presentation,
-            "doc" => Self::LibreWriter,
-            "docx" => Self::LibreWriter,
-            "dot" => Self::LibreWriter,
-            "dotx" => Self::LibreWriter,
-            "odt" => Self::LibreWriter,
-            "ott" => Self::LibreWriter,
-            "pages" => Self::LibreWriter,
-            "rtf" => Self::LibreWriter,
-            "txt" => Self::Plain,
-            "pdf" => Self::PDF,
-            "csv" => Self::Excel,
-
-            _ => Self::Unknown
-
-
+            Some(ext) => {
+                match ext{
+                    "md" => Self::Markdown,
+                    "yml" => Self::Config,
+                    "yaml" => Self::Config,
+                    "json" => Self::Config,
+                    "config" => Self::Config,
+                    "toml" => Self::Config,
+                    "xml" => Self::Config,
+                    "html" => Self::Web,
+                    "htmx" => Self::Web,
+                    "css" => Self::Web,
+                    "py" => Self::Python,
+                    "js" => Self::JavaScript,
+                    "ts" => Self::JavaScript,
+                    "rs" => Self::Rust,
+                    "c" => Self::CSOURCE,
+                    "cpp" => Self::CSOURCE,
+                    "h" => Self::CSOURCE,
+                    "hpp" => Self::CSOURCE,
+                    "ppt" => Self::Presentation,
+                    "pptx" => Self::Presentation,
+                    "pps" => Self::Presentation,
+                    "ppsx" => Self::Presentation,
+                    "pot" => Self::Presentation,
+                    "potx" => Self::Presentation,
+                    "odp" => Self::Presentation,
+                    "odkey" => Self::Presentation,
+                    "doc" => Self::LibreWriter,
+                    "docx" => Self::LibreWriter,
+                    "dot" => Self::LibreWriter,
+                    "dotx" => Self::LibreWriter,
+                    "odt" => Self::LibreWriter,
+                    "ott" => Self::LibreWriter,
+                    "pages" => Self::LibreWriter,
+                    "rtf" => Self::LibreWriter,
+                    "txt" => Self::Plain,
+                    "pdf" => Self::PDF,
+                    "csv" => Self::Excel,
+        
+                    _ => Self::Unknown
+                }
+            },
+            None => Self::Unknown
         }
+
 
     }
 }
@@ -93,7 +94,7 @@ struct IndexEntry{
     filetype: FileType,
     filepath: PathBuf,
     keywords: String,
-    last_modified_timestamp: usize,
+    last_modified_timestamp: u128,
 }
 
 pub struct CrawlDatabase{
@@ -189,8 +190,18 @@ impl CrawlDatabase{
 
     fn index_file(&self,file_path: &PathBuf){
         let meta = fs::metadata(file_path).expect("Expected to be able to read MetaData on file");
-        extract_keywords(file_path);
+        let keywords = extract_keywords(file_path);
+        let filename = file_path.file_name().unwrap().to_str().unwrap();
 
+
+        let index_entry = IndexEntry{
+            filename: String::from(filename),
+            filetype: FileType::get(self.get_file_extension(filename)),
+            filepath: file_path.to_path_buf(),
+            keywords:keywords,
+            last_modified_timestamp: meta.modified().unwrap().duration_since(UNIX_EPOCH).unwrap().as_millis(),
+        };
+        self.store_index(&index_entry);
     }
 
 
