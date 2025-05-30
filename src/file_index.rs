@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::fs;
-use keyword_extraction::{rake::{Rake, RakeParams}, text_rank::{TextRank, TextRankParams}};
+use keyword_extraction::{text_rank::{TextRank, TextRankParams}};
 use stop_words::{get,LANGUAGE};
 
 const AMOUNT_KEYWORDS:usize = 20;
