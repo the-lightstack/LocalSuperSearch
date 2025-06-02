@@ -152,11 +152,14 @@ impl Indexer {
         let detection_text_snippet = if content.len() < LANG_ANALYSIS_FIRST_CHUNK {
             &content
         } else {
+            // TODO: check when this fails
             &content
                 .get(0..LANG_ANALYSIS_FIRST_CHUNK)
                 .unwrap()
                 .to_string()
         };
+
+        println!("Detection snippet (len):{},{}",detection_text_snippet.len(),detection_text_snippet);
 
         let text_language = self
             ._language_detector
