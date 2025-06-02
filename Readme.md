@@ -15,4 +15,4 @@ storing the index in a SQLITE database.
 - create database for crawled-commands, so that they can all be replicated in a cron job (something like `./is --re-crawl` )
 - only crawl if modification date has changed
 - word vectorization to find semantic similarities between keywords and searches
-
+- generate Database path depending on OS (I think mac doesn't have ~/.local/share/) and maybe even Windows
