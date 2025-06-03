@@ -343,7 +343,7 @@ impl CrawlDatabase {
         let index_entry = IndexEntry {
             filename: String::from(filename),
             filetype: FileType::get(get_file_extension(filename)),
-            filepath: file_path.to_path_buf(),
+            filepath: file_path.to_path_buf().canonicalize().unwrap(),
             keywords: keywords,
             last_modified_timestamp: meta
                 .modified()
@@ -352,6 +352,9 @@ impl CrawlDatabase {
                 .unwrap()
                 .as_millis(),
         };
+
+
+        println!("Filepath (abs): {:?}",index_entry.filepath);
 
 
         match file_crawl_status{

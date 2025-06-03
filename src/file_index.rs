@@ -12,7 +12,6 @@ use crate::crawl::{get_file_extension, FileType};
 const AMOUNT_KEYWORDS: usize = 20;
 const LANG_ANALYSIS_FIRST_CHUNK: usize = 100;
 
-// static STOP_WORDS: Vec<std::string::String> = get(LANGUAGE::English);
 
 #[derive(Debug, Clone)]
 struct LanguageConversionFailError;
@@ -67,6 +66,7 @@ pub struct Indexer {
 #[derive(Debug, PartialEq)]
 pub struct CannotExtractKeywordsError {}
 
+// TODO: do this with fancy macro because that sounds fun :9
 impl Indexer {
     pub fn init() -> Self {
         let supported_languages = vec![
@@ -203,16 +203,3 @@ impl Indexer {
             .collect())
     }
 }
-
-// TODO: make this read in files *Buffered* and turn to keywords in chunks.
-// Otherwise we will quickly run out of memory, especially when running in more threads
-// fn extract_keywords(file_path: &PathBuf)->Result<String>{
-//     // check how expensive replacing is
-//    let byte_contents =  fs::read(file_path)?;
-
-//     let text_rank = TextRank::new(TextRankParams::WithDefaults(&contents, &STOP_WORDS));
-//     let ranked_keywords = text_rank.get_ranked_words(AMOUNT_KEYWORDS);
-
-//     // println!("KWS: {:?}",ranked_keywords);
-
-// }
