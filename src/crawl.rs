@@ -1,4 +1,4 @@
-use core::panic;
+use core::{panic};
 use rusqlite::types::FromSql;
 use rusqlite::Connection;
 use std::convert::From;
@@ -153,7 +153,7 @@ mod tests {
             last_modified_timestamp: 92738728374,
         };
 
-        cdb.store_index(&ie);
+        cdb.store_new_index(&ie);
     }
 
     #[test]
@@ -193,6 +193,13 @@ pub fn get_file_extension(name: &str) -> Option<String> {
             Some(name.split(".").last()?.to_lowercase())
         }
     }
+}
+
+#[derive(Debug,PartialEq)]
+enum FileCrawlStatus{
+    FileNotChanged,
+    FileChanged,
+    FirstFileIndex
 }
 
 const INDEXABLE_FILE_EXTENSIONS: &[&str] = &[
@@ -246,14 +253,7 @@ impl CrawlDatabase {
     }
 
     pub fn search_keyword(&self, keyword: &str) {
-        // Search through keywords and get references to index
-        // self._conn
-        //     .execute(
-        //         "SELECT * FROM keywords K INNER JOIN search_index S ON K.si_id=S.id
-        //                         WHERE K.word LIKE ?1",
-        //         (format!("%{}%", keyword),),
-        //     )
-        //     .unwrap();
+
 
         let mut stmt = self._conn.prepare("SELECT S.filename,S.filepath, S.filetype,K.word,K.score FROM keywords K INNER JOIN search_index S ON K.si_id=S.id
                                 WHERE K.word LIKE :search ORDER BY K.score DESC LIMIT 20").unwrap();
@@ -284,7 +284,7 @@ impl CrawlDatabase {
 
     }
 
-    fn store_index(&mut self, ie: &IndexEntry) {
+    fn store_new_index(&mut self, ie: &IndexEntry) {
         self._conn.execute("INSERT INTO search_index (filename, filetype, filepath, last_modified_timestamp) VALUES (?1,?2,?3,?4)", (&ie.filename,ie.filetype as i64,ie.filepath.to_str(),ie.last_modified_timestamp as u64)).unwrap();
 
         let last_rowid = self._conn.last_insert_rowid();
@@ -296,38 +296,50 @@ impl CrawlDatabase {
                     (last_rowid, &kw.word, kw.score),
                 )
                 .unwrap();
-        }
+        };
+    }
 
-        // let query = "INSERT INTO search_index
-        //             (filename, filetype, filepath, last_modified_timestamp)
-        //             VALUES (?,?,?,?,?)";
-        // let mut statement = self._conn.prepare(query).unwrap();
+    fn update_index(&mut self, ie: &IndexEntry) {
+        self._conn.execute("UPDATE search_index SET filename=?1, filetype=?2, last_modified_timestamp=?3 WHERE filepath=?4",
+    (&ie.filename,
+            ie.filetype as i64,
+            ie.last_modified_timestamp as u64,
+            ie.filepath.to_str())).unwrap();
 
-        // // make more elegant/dynamic later ...
+        let last_rowid = self._conn.last_insert_rowid();
 
-        // statement.bind((1,ie.filename.as_str())).unwrap();
-        // statement.bind((2,ie.filetype as i64)).unwrap();
-        // statement.bind((3, ie.filepath.to_str())).unwrap();
-        // // statement.bind((4, ie.keywords.as_ptr())).unwrap();
-        // statement.bind((5,ie.last_modified_timestamp as i64)).unwrap();
+        // Delete all old Keywords
+        self._conn.execute("DELETE FROM keywords WHERE si_id=?1",(last_rowid,)).unwrap();
 
-        // statement.next().unwrap();
-
-        // // TODO: Loop over keywords and insert with reference to search_index
-        // let keyword_query = "INSERT INTO keywords (si_id)"
-        // for kw in ie.keywords{
-
-        // }
+        // And insert the new ones
+        for kw in &ie.keywords {
+            self._conn
+                .execute(
+                    "INSERT INTO keywords (si_id, word, score) VALUES (?1, ?2, ?3)",
+                    (last_rowid, &kw.word, kw.score),
+                )
+                .unwrap();
+        };
     }
 
     fn index_file(&mut self, file_path: &PathBuf) {
         let meta = fs::metadata(file_path).expect("Expected to be able to read MetaData on file");
+
+        // Check if modified time has changed
+        let last_modified = meta.modified().expect("Cannot read last modified");
+
+        let file_crawl_status = self.check_needs_crawl(file_path.to_str().unwrap(), last_modified.duration_since(UNIX_EPOCH).unwrap().as_millis());
+        if file_crawl_status == FileCrawlStatus::FileNotChanged  {return;}
+
+
+
         let keywords = self
             ._indexer
             .get_keywords_from_path(file_path)
             .expect("thsis should not just fail");
         let filename = file_path.file_name().unwrap().to_str().unwrap();
 
+        // TODO: ALWAYS USE FULL PATHS, NOT RELATIVE HERE!!!
         let index_entry = IndexEntry {
             filename: String::from(filename),
             filetype: FileType::get(get_file_extension(filename)),
@@ -340,7 +352,41 @@ impl CrawlDatabase {
                 .unwrap()
                 .as_millis(),
         };
-        self.store_index(&index_entry);
+
+
+        match file_crawl_status{
+            FileCrawlStatus::FirstFileIndex => {
+                self.store_new_index(&index_entry);
+            },
+            FileCrawlStatus::FileChanged => {
+                self.update_index(&index_entry);
+            },
+            FileCrawlStatus::FileNotChanged => unreachable!()
+        }
+
+    }
+
+    fn check_needs_crawl(&self, file_path: &str, life_file_last_modified:u128)->FileCrawlStatus{
+        let params = &[(":fp",&String::from(file_path))];
+
+        let mut stmt = self._conn.prepare("SELECT last_modified_timestamp FROM search_index WHERE filepath=:fp").unwrap();
+
+        match stmt.query_row(params,|r |{
+            let ts: u64 = r.get(0)?;
+            Ok(ts)
+        }){
+            Ok(timestamp) => {
+                if (timestamp as u128) == life_file_last_modified{
+                    FileCrawlStatus::FileNotChanged
+                }else{
+                    FileCrawlStatus::FileChanged
+                }
+            },
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                FileCrawlStatus::FirstFileIndex
+            },
+            Err(_) => panic!("Sqlite Error wtf")
+        }
     }
 
     pub fn start_crawl(&mut self, start_path: PathBuf) {

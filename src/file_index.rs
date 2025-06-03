@@ -159,7 +159,6 @@ impl Indexer {
                 .to_string()
         };
 
-        println!("Detection snippet (len):{},{}",detection_text_snippet.len(),detection_text_snippet);
 
         let text_language = self
             ._language_detector
