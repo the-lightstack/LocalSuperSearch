@@ -10,7 +10,6 @@ use queues::*;
 
 use crate::file_index::{Indexer, Keyword};
 
-// use crate::file_index::extract_keywords;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FileType {
@@ -339,7 +338,6 @@ impl CrawlDatabase {
             .expect("thsis should not just fail");
         let filename = file_path.file_name().unwrap().to_str().unwrap();
 
-        // TODO: ALWAYS USE FULL PATHS, NOT RELATIVE HERE!!!
         let index_entry = IndexEntry {
             filename: String::from(filename),
             filetype: FileType::get(get_file_extension(filename)),
