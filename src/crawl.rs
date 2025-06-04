@@ -202,8 +202,8 @@ enum FileCrawlStatus{
 }
 
 const INDEXABLE_FILE_EXTENSIONS: &[&str] = &[
-    "md", "yml", "yaml", "json", "config", "toml", "xml", "html", "htmx", "css", "py", "js", "ts",
-    "rs", "c", "cpp", "h", "hpp", "ppt", "pptx", "pps", "ppsx", "pot", "potx", "odp", "odkey",
+    "md", "yml", "yaml", "json", "config", "toml", "xml",
+    "ppt", "pptx", "pps", "ppsx", "pot", "potx", "odp", "odkey",
     "doc", "docx", "dot", "dotx", "odt", "ott", "pages", "rtf", "txt", "pdf",
 ];
 // const INDEXABLE_FILE_EXTENSIONS: &[&str] = &["pdf","ppt","pptx","py","js","ts","rs","c","cpp","h","hpp","md","txt","html","css","config","json","toml","yaml","yml","csv"];
@@ -332,10 +332,16 @@ impl CrawlDatabase {
 
 
 
-        let keywords = self
+        let keywords = match self
             ._indexer
-            .get_keywords_from_path(file_path)
-            .expect("thsis should not just fail");
+            .get_keywords_from_path(file_path){
+                Ok(k) =>k,
+                Err(_err) => {
+                    println!("[!] {:?}",file_path);
+                    return;
+                }
+            };
+
         let filename = file_path.file_name().unwrap().to_str().unwrap();
 
         let index_entry = IndexEntry {

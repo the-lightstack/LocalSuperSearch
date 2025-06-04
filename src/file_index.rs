@@ -139,24 +139,20 @@ impl Indexer {
                 }
             }
 
-            FileType::LibreWriter => todo!("Add parser for Word style documents"),
-            FileType::Presentation => todo!("Add parser for presentation types"),
+            FileType::LibreWriter => None ,//todo!("Add parser for Word style documents"),
+            FileType::Presentation => None,//todo!("Add parser for presentation types"),
             FileType::Unknown => None,
         };
 
         let content = content.ok_or(CannotExtractKeywordsError {})?;
-
         // Test for language
 
         // If not a big file, take all and analyse
-        let detection_text_snippet = if content.len() < LANG_ANALYSIS_FIRST_CHUNK {
+        let detection_text_snippet = if content.len() <= LANG_ANALYSIS_FIRST_CHUNK {
             &content
         } else {
             // TODO: check when this fails
-            &content
-                .get(0..LANG_ANALYSIS_FIRST_CHUNK)
-                .unwrap()
-                .to_string()
+            &content.chars().take(LANG_ANALYSIS_FIRST_CHUNK).collect::<String>()
         };
 
 
