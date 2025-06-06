@@ -202,11 +202,10 @@ enum FileCrawlStatus{
 }
 
 const INDEXABLE_FILE_EXTENSIONS: &[&str] = &[
-    "md", "yml", "yaml", "json", "config", "toml", "xml",
-    "ppt", "pptx", "pps", "ppsx", "pot", "potx", "odp", "odkey",
+    "md", "ppt", "pptx", "pps", "ppsx", "pot", "potx", "odp", "odkey",
     "doc", "docx", "dot", "dotx", "odt", "ott", "pages", "rtf", "txt", "pdf",
 ];
-// const INDEXABLE_FILE_EXTENSIONS: &[&str] = &["pdf","ppt","pptx","py","js","ts","rs","c","cpp","h","hpp","md","txt","html","css","config","json","toml","yaml","yml","csv"];
+
 const EXCLUDE_DIRS: &[&str] = &[".git", ".yarn", ".var", "venv", "__pycache__"];
 impl CrawlDatabase {
     pub fn init(path: &str) -> Self {
@@ -231,7 +230,7 @@ impl CrawlDatabase {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS keywords (
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-            si_id REFERENCES search_index(id),
+            si_id REFERENCES search_index(id) ON DELETE CASCADE,
             word STRING NOT NULL,
             score FLOAT NOT NULL
 

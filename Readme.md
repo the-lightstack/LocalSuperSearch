@@ -16,6 +16,7 @@ storing the index in a SQLITE database.
 -[x] only crawl if modification date has changed
 - word vectorization to find semantic similarities between keywords and searches
 - generate Database path depending on OS (I think mac doesn't have ~/.local/share/) and maybe even Windows
+-[ ] Parallel processing would be probably bring a big speed up
 
 ## IDEA
 decrease Crawl type by also storing the modification dates of dirs we pass by,

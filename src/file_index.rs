@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, panic};
 
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -61,6 +61,7 @@ impl From<&(String, f32)> for Keyword {
 pub struct Indexer {
     _stop_words_cache: HashMap<lingua::Language, Vec<String>>,
     _language_detector: LanguageDetector,
+    _punctuation_replace: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -89,9 +90,12 @@ impl Indexer {
         let __language_detector =
             LanguageDetectorBuilder::from_languages(&supported_languages).build();
 
+        let _bad_punctuation = String::from(r"“„");
+
         Self {
             _stop_words_cache: HashMap::new(),
             _language_detector: __language_detector,
+            _punctuation_replace: _bad_punctuation
         }
     }
 
@@ -128,7 +132,9 @@ impl Indexer {
                 let bytes_res = std::fs::read(&file_path);
                 match bytes_res {
                     Ok(bytes) => {
-                        let out = pdf_extract::extract_text_from_mem(&bytes);
+                        let out = panic::catch_unwind(||{
+                            pdf_extract::extract_text_from_mem(&bytes).expect("Encountered malformed PDF File. Skipping it")
+                        });
 
                         match out {
                             Ok(cont) => Some(cont),
@@ -144,14 +150,20 @@ impl Indexer {
             FileType::Unknown => None,
         };
 
-        let content = content.ok_or(CannotExtractKeywordsError {})?;
+        let mut content = content.ok_or(CannotExtractKeywordsError {})?;
         // Test for language
+
+        //
+        // Prepare by replacing bad punctuation
+        // TODO: Test how slow this is; check if regex or looping over "bad chars" is faster
+        for c in self._punctuation_replace.chars(){
+            content = content.replace(c, "")
+        }
 
         // If not a big file, take all and analyse
         let detection_text_snippet = if content.len() <= LANG_ANALYSIS_FIRST_CHUNK {
             &content
         } else {
-            // TODO: check when this fails
             &content.chars().take(LANG_ANALYSIS_FIRST_CHUNK).collect::<String>()
         };
 
