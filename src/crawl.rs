@@ -206,7 +206,63 @@ const INDEXABLE_FILE_EXTENSIONS: &[&str] = &[
     "doc", "docx", "dot", "dotx", "odt", "ott", "pages", "rtf", "txt", "pdf",
 ];
 
-const EXCLUDE_DIRS: &[&str] = &[".git", ".yarn", ".var", "venv", "__pycache__"];
+// const EXCLUDE_DIRS: &[&str] = &[".git", ".yarn", ".var", "venv", "__pycache__", "node_modules"];
+const EXCLUDE_DIRS: &[&str] = &[
+    ".git",          // Git metadata
+    ".svn",          // Subversion metadata
+    ".hg",           // Mercurial metadata
+    ".bzr",          // Bazaar metadata
+    ".idea",         // JetBrains IDE config
+    ".vscode",       // VSCode workspace config
+    ".DS_Store",     // macOS directory metadata
+    ".Trash",        // macOS trash
+    ".cache",        // User or system cache
+    ".config",       // App configs
+    ".local",        // App data
+    ".var",          // Runtime data (often user-level)
+
+    "node_modules",  // JavaScript dependencies
+    "vendor",        // Go/PHP dependencies
+    "venv",          // Python virtualenv
+    "env",           // Python virtualenv (alt name)
+    ".venv",         // Python virtualenv (hidden)
+    "__pycache__",   // Python bytecode
+    "target",        // Rust build output
+    "build",         // C/C++/Rust build folders
+    "dist",          // Distribution output (JS/CSS builds)
+    "out",           // Build output (misc languages)
+    "bin",           // Compiled binaries
+    "obj",           // Object files
+    "pkg",           // Package outputs
+
+    ".next",         // Next.js
+    ".nuxt",         // Nuxt.js
+    ".svelte-kit",   // SvelteKit
+    ".angular",      // Angular CLI output
+
+    "Pods",          // CocoaPods (iOS/macOS deps)
+    "DerivedData",   // Xcode build data
+    "gradle",        // Gradle build output
+    ".gradle",       // Gradle metadata
+    "buildSrc",      // Gradle build scripts
+    ".terraform",    // Terraform state
+
+    "log",           // Log files
+    "logs",          // Log files
+    "tmp",           // Temporary files
+    "temp",          // Temporary files
+
+    ".yarn",         // Yarn 2+ cache
+    ".pnp",          // Yarn Plug'n'Play
+
+    ".tox",          // Python testing
+    ".pytest_cache", // pytest cache
+
+    ".mypy_cache",   // mypy cache
+    ".coverage",     // coverage tool output
+];
+
+
 impl CrawlDatabase {
     pub fn init(path: &str) -> Self {
         let conn = Connection::open(path).unwrap();
@@ -253,8 +309,10 @@ impl CrawlDatabase {
     pub fn search_keyword(&self, keyword: &str) {
 
 
-        let mut stmt = self._conn.prepare("SELECT S.filename,S.filepath, S.filetype,K.word,K.score FROM keywords K INNER JOIN search_index S ON K.si_id=S.id
-                                WHERE K.word LIKE :search ORDER BY K.score DESC LIMIT 20").unwrap();
+        // let mut stmt = self._conn.prepare("SELECT S.filename,S.filepath, S.filetype,K.word,K.score FROM keywords K INNER JOIN search_index S ON K.si_id=S.id
+        //                         WHERE K.word LIKE :search ORDER BY K.score DESC LIMIT 20").unwrap();
+        let mut stmt = self._conn.prepare("SELECT S.filename,S.filepath, S.filetype,K.word,SUM(K.score) FROM keywords K INNER JOIN search_index S ON K.si_id=S.id
+        WHERE K.word LIKE :search OR S.filename LIKE :search GROUP BY S.filepath ORDER BY SUM(K.score) DESC LIMIT 20").unwrap();
 
 
         let params = &[(":search",&format!("%{}%", keyword))];
@@ -396,7 +454,6 @@ impl CrawlDatabase {
     }
 
     pub fn start_crawl(&mut self, start_path: PathBuf) {
-        // TODO: For later crawls we should really only check if modified TS has changed!!
 
         // We do BFS with queue
         let mut current_directory = start_path;

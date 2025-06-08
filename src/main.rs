@@ -50,7 +50,6 @@ fn main() {
     match args.search_term {
         Some(search) => {
             let index_db = crawl::CrawlDatabase::init(&database_location());
-            println!("Search through database");
             search_through_database(&index_db, search);
         }
         None => {
